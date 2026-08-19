@@ -1,0 +1,77 @@
+name: TDS GA7 Release Gate
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+  id-token: none
+
+jobs:
+  test-release-gate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: TDS identity: 22f3000616@ds.study.iitm.ac.in
+        run: echo "TDS identity verified"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Test release gate
+        run: |
+          python - <<'PY'
+          import app
+
+          client = app.app.test_client()
+
+          payload = {
+              "target": "preview",
+              "event": "push",
+              "ref": "refs/heads/main",
+              "workflow": {
+                  "trigger": "push",
+                  "permissions": {
+                      "contents": "read",
+                      "packages": "write",
+                      "id-token": "none"
+                  },
+                  "testsPassed": True,
+                  "matrixComplete": True,
+                  "failFast": False,
+                  "actions": [
+                      {
+                          "owner": "actions",
+                          "name": "checkout",
+                          "ref": "v4"
+                      }
+                  ]
+              },
+              "image": {
+                  "multiStage": True,
+                  "runsAsRoot": False,
+                  "secretMode": "none",
+                  "criticalVulnerabilities": 0,
+                  "digestPinned": True
+              }
+          }
+
+          response = client.post("/release-gate", json=payload)
+
+          assert response.status_code == 200
+          assert response.get_json()["decision"] == "promote"
+          assert response.get_json()["violations"] == []
+
+          print("Release gate test passed")
+          PY
