@@ -11,12 +11,13 @@ permissions:
   id-token: none
 
 jobs:
-  test-release-gate:
+  test:
+    name: Release Gate Tests
     runs-on: ubuntu-latest
 
     steps:
-      - name: TDS identity: "22f3000616@ds.study.iitm.ac.in"
-        run: echo "TDS identity verified"
+      - name: "TDS identity: 22f3000616@ds.study.iitm.ac.in"
+        run: echo "Identity verified"
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,8 +71,10 @@ jobs:
           response = client.post("/release-gate", json=payload)
 
           assert response.status_code == 200
-          assert response.get_json()["decision"] == "promote"
-          assert response.get_json()["violations"] == []
+          result = response.get_json()
+
+          assert result["decision"] == "promote"
+          assert result["violations"] == []
 
           print("Release gate test passed")
           PY
